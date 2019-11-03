@@ -3,8 +3,16 @@
 
 #include <vector>
 #include "Eigen-3.3/Eigen/Core"
+#include "Eigen-3.3/Eigen/QR"
 
 class MPC {
+ private:
+
+
+ // Coefficients of polynomial fitted to the waypoints
+ //Eigen::VectorXd coeffs_;
+
+
  public:
   MPC();
 

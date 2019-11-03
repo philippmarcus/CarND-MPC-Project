@@ -16,16 +16,15 @@ using nlohmann::json;
 using std::string;
 using std::vector;
 
-// For converting back and forth between radians and degrees.
-constexpr double pi() { return M_PI; }
-double deg2rad(double x) { return x * pi() / 180; }
-double rad2deg(double x) { return x * 180 / pi(); }
+
 
 int main() {
   uWS::Hub h;
 
   // MPC is initialized here!
   MPC mpc;
+
+
 
   h.onMessage([&mpc](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
@@ -83,6 +82,9 @@ int main() {
            * TODO: add (x,y) points to list here, points are in reference to 
            *   the vehicle's coordinate system the points in the simulator are 
            *   connected by a Yellow line
+           * 
+           * 
+           * The MPC needs to keep track of the current index in the waypoint list
            */
 
           msgJson["next_x"] = next_x_vals;
