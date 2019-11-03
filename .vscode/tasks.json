@@ -1,0 +1,26 @@
+{
+    "version": "2.0.0",
+
+    "tasks": [
+        {
+            "label": "Build with Makefile",
+            "type": "shell",
+            "command": "make clean && make DEBUG=1",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": {
+                "base": "$gcc",
+                "fileLocation": ["absolute"]
+            },
+            "options": {
+                "cwd": "${workspaceRoot}/build",
+            },
+        }
+    ]
+}

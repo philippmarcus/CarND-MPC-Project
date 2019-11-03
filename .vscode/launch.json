@@ -1,0 +1,23 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "(lldb) Launch",
+        "type": "cppdbg",
+        "request": "launch",
+        // IMPORTANT: Set "CMAKE_BUILD_TYPE" to "Debug" by calling make edit_cache
+        "program": "${workspaceRoot}/build/mpc",
+        "args": [],
+        "stopAtEntry": false,
+        "cwd": "${workspaceRoot}/build",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "lldb",
+        "logging": {
+          "trace": true,
+          "traceResponse": false,
+          "engineLogging": false,
+        }
+      }
+    ]
+  }
