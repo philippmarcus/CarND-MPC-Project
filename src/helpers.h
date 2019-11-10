@@ -32,4 +32,6 @@ constexpr double pi();
 double deg2rad(double x);
 double rad2deg(double x);
 
+std::string vec2str(std::vector<double> x);
+
 #endif  // HELPERS_H

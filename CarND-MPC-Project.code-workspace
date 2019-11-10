@@ -86,7 +86,8 @@
 			"bit": "cpp",
 			"*.tcc": "cpp",
 			"memory_resource": "cpp",
-			"hash_map": "cpp"
+			"hash_map": "cpp",
+			"__functional_03": "cpp"
 		}
 	}
 }

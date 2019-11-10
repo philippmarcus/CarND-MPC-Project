@@ -15,8 +15,8 @@ using Eigen::VectorXd;
 /**
  * TODO: Set the timestep length and duration
  */
-size_t N = 10;
-double dt = 0.25;
+size_t N = 20;
+double dt = 0.1;
 
 // start positions for the state variables
 uint x_start = 0;
@@ -28,7 +28,7 @@ uint epsi_start = cte_start + N;
 
 // Start positions for the actuators
 uint delta_start = epsi_start + N;
-uint a_start = delta_start + N;
+uint a_start = delta_start + N - 1;
 
 // This value assumes the model presented in the classroom is used.
 //
@@ -41,6 +41,7 @@ uint a_start = delta_start + N;
 //
 // This is the length from front to CoG that has a similar radius.
 const double Lf = 2.67;
+AD<double> v_ref = 50;
 
 class FG_eval {
  public:
@@ -60,49 +61,48 @@ class FG_eval {
     
     // Define the cost function
     fg[0] = 0;
-
-    AD<double> v_ref = 35;
-
-    // Punish deviation from reference speed to prevent the car from stopping
-    // Punish cross-track error (deviation from the ideal lane)
-    // Punish psi error (wrong angle of sight)
+    
+    // Cost for CTE, psi error and velocity
     for (int t = 0; t < N; ++t) {
-      fg[0] += CppAD::pow(vars[v_start + t] - v_ref, 2);
-      fg[0] += CppAD::pow(vars[epsi_start + t], 2);
-      fg[0] += CppAD::pow(vars[cte_start + t], 2);
+      fg[0] += 20. * CppAD::pow(vars[cte_start + t], 2);
+      fg[0] += 20. *  CppAD::pow(vars[epsi_start + t], 2);
+      fg[0] += 1.5 *  CppAD::pow(vars[v_start + t] - v_ref, 2); // 0.0001 worked without latency
     }
 
-    // Minimize the use of actuators.
-    for (int t = 0; t < N - 1; ++t) {
-      fg[0] += CppAD::pow(vars[delta_start + t], 2);
-      fg[0] += CppAD::pow(vars[a_start + t], 2);
+    // Punish changes in the steering angle - was not needed without latency
+    for (int t=1; t < N; ++t) {
+      fg[0] += 600. * CppAD::pow(vars[delta_start + t] - vars[delta_start + t - 1], 2);
+      fg[0] += 20. * CppAD::pow(vars[delta_start + t - 1], 2);
     }
-
-    // Minimize the value gap between sequential actuations.
-    for (int t = 0; t < N - 2; ++t) {
-      fg[0] += CppAD::pow(vars[delta_start + t + 1] - vars[delta_start + t], 2);
-      fg[0] += CppAD::pow(vars[a_start + t + 1] - vars[a_start + t], 2);
-    }
+    
+    
+    // Initial constraints
+    fg[1 + x_start] = vars[x_start];
+    fg[1 + y_start] = vars[y_start];
+    fg[1 + psi_start] = vars[psi_start];
+    fg[1 + v_start] = vars[v_start];
+    fg[1 + cte_start] = vars[cte_start];
+    fg[1 + epsi_start] = vars[epsi_start];
 
     // Set up the constraints
     for(int t = 1; t  < N; ++t){
       // Values for t (leading +1 needed as fg vector starts with cost at fg[0])
-      CppAD::AD<double>  x0 = vars[1 + x_start + t - 1];
-      CppAD::AD<double>  y0 = vars[1 + y_start + t - 1];
-      CppAD::AD<double>  v0 = vars[1 + v_start + t - 1];
-      CppAD::AD<double>  psi0 = vars[1 + psi_start + t - 1];
-      CppAD::AD<double>  cte0 = vars[1 + cte_start + t - 1];
-      CppAD::AD<double>  epsi0 = vars[1 + epsi_start + t - 1];
-      CppAD::AD<double>  delta0 = vars[1 + delta_start + t - 1];
-      CppAD::AD<double>  a0 = vars[1 + a_start + t - 1];
+      CppAD::AD<double>  x0 = vars[x_start + t - 1];
+      CppAD::AD<double>  y0 = vars[y_start + t - 1];
+      CppAD::AD<double>  v0 = vars[v_start + t - 1];
+      CppAD::AD<double>  psi0 = vars[psi_start + t - 1];
+      CppAD::AD<double>  cte0 = vars[cte_start + t - 1];
+      CppAD::AD<double>  epsi0 = vars[epsi_start + t - 1];
+      CppAD::AD<double>  delta0 = vars[delta_start + t - 1];
+      CppAD::AD<double>  a0 = vars[a_start + t - 1];
 
       // Values for t+1
-      CppAD::AD<double>  x1 = vars[1 + x_start + t - 1];
-      CppAD::AD<double>  y1 = vars[1 + y_start + t - 1];
-      CppAD::AD<double>  v1 = vars[1 + v_start + t - 1];
-      CppAD::AD<double>  psi1 = vars[1 + psi_start + t - 1];
-      CppAD::AD<double>  cte1 = vars[1 + cte_start + t - 1];
-      CppAD::AD<double>  epsi1 = vars[1 + epsi_start + t - 1];
+      CppAD::AD<double>  x1 = vars[x_start + t];
+      CppAD::AD<double>  y1 = vars[y_start + t];
+      CppAD::AD<double>  v1 = vars[v_start + t];
+      CppAD::AD<double>  psi1 = vars[psi_start + t];
+      CppAD::AD<double>  cte1 = vars[cte_start + t];
+      CppAD::AD<double>  epsi1 = vars[epsi_start + t];
 
       // Function value and its derivative
       AD<double> f0 = coeffs[0] + coeffs[1] * x0 + coeffs[2] * x0*x0 + coeffs[3] * x0*x0*x0;
@@ -113,13 +113,12 @@ class FG_eval {
       // As we defined the contraints to be 0, the solver needs to
       // finde such delta and a values that the following fg values
       // match 0 for all states after the initial one.
-      fg[1 + x_start + t] = x1 - (x0 + v0 * CppAD::cos(psi0));
-      fg[1 + y_start + t] = y1 - (y0 + v0 * CppAD::sin(psi0));
+      fg[1 + x_start + t] = x1 - (x0 + v0 * CppAD::cos(psi0) * dt);
+      fg[1 + y_start + t] = y1 - (y0 + v0 * CppAD::sin(psi0) * dt);
       fg[1 + v_start + t] = v1 - (v0 + a0 * dt);
       fg[1 + psi_start + t] = psi1 -  (psi0 - (v0/Lf) * delta0 * dt);
-      fg[1 + cte_start + t] = cte1 - (f0 - y0 + v0 * CppAD::sin(epsi0) * dt);
-      fg[1 + epsi_start + t] = epsi1 - (psides0 + (v0/Lf) * delta0 * dt);
-
+      fg[1 + cte_start + t] = cte1 - ((f0 - y0) + (v0 * CppAD::sin(epsi0) * dt));
+      fg[1 + epsi_start + t] = epsi1 - ((psi0 - psides0) - (v0/Lf) * delta0 * dt);
     }
   }
 };
@@ -128,46 +127,9 @@ class FG_eval {
 // MPC class definition implementation.
 //
 MPC::MPC() {
-
-  const std::string TRACK_DATA_FILENAME = "../lake_track_waypoints.csv";
-
-  // Load the input file
-  std::ifstream track_data_file;
-  track_data_file.open(TRACK_DATA_FILENAME);
-
-  // Check if file was found
-  if(!track_data_file.is_open()) {
-    std::cout << "Exiting program as track data file not found in location: " << TRACK_DATA_FILENAME << std::endl;
-    exit(-1);
-  }
-
-  // Read in the track data
-  std::string str_p_x;
-  std::string str_p_y;
-  double p_x;
-  double p_y;
-  std::vector<double> track_data_x_;
-  std::vector<double> track_data_y_;
-
-  while(track_data_file.good()) {
-
-    // Read in two cells of the line
-    getline(track_data_file, str_p_x, ',');
-    getline(track_data_file, str_p_y, ',');
-    
-    // Convert to double and save
-    std::stringstream(str_p_x) >> p_x;
-    std::stringstream(str_p_y) >> p_y;
-
-    track_data_x_.push_back(p_x);
-    track_data_y_.push_back(p_y);
-  }
-  std::cout << "Parsed " << track_data_x_.size() << " waypoints from file " << TRACK_DATA_FILENAME << std::endl;
-
-  // Compute the coefficients by fitting a 3 order polynomial to the waypoints
-  VectorXd coeffs_ = polyfit(Eigen::Map<Eigen::VectorXd>(track_data_x_.data(), track_data_x_.size()), 
-                              Eigen::Map<Eigen::VectorXd>(track_data_y_.data(), track_data_y_.size()),
-                              3);
+  size_t n_vars = N * 6 + (N-1) * 2;
+  has_prev_vars_ = false;
+  prev_vars_ = CppAD::vector<double>(n_vars);
 
 }
 MPC::~MPC() {}
@@ -200,36 +162,39 @@ std::vector<double> MPC::Solve(const VectorXd &state, const VectorXd &coeffs) {
   // SHOULD BE 0 besides initial state.
   Dvector vars(n_vars);
   for (int i = 0; i < n_vars; ++i) {
-    vars[i] = 0;
+    vars[i] = 0.0;
   }
+
+  if (has_prev_vars_) {
+    vars = prev_vars_;
+  }
+
+  // Initial values - additionally required by a constraint
+  
+  vars[x_start] = x;
+  vars[y_start] = y;
+  vars[v_start] = v;
+  vars[psi_start] = psi;
+  vars[cte_start] = cte;
+  vars[epsi_start] = epsi;
+  
 
   Dvector vars_lowerbound(n_vars);
   Dvector vars_upperbound(n_vars);
 
-
-
   /**
    * Set lower and upper limits for variables.
    */
-  for (int t = 0; t < N; ++t) {
-    vars_lowerbound[x_start + t] = std::numeric_limits<double>::min();
-    vars_upperbound[x_start + t] = std::numeric_limits<double>::max();
+  
+  // Standard initialization for all values - overwrite psi later
+  for (int t = 0; t < n_vars; ++t) {
+    // ATTENTION: This does not work with std::numeric_limits<double>::max()/min()
+    vars_lowerbound[t] = -1.0e19;
+    vars_upperbound[t] = 1.0e19;
+  }
 
-    vars_lowerbound[y_start + t] = std::numeric_limits<double>::min();
-    vars_upperbound[y_start + t] = std::numeric_limits<double>::max();
-
-    vars_lowerbound[v_start + t] = std::numeric_limits<double>::min();
-    vars_upperbound[v_start + t] = std::numeric_limits<double>::max();
-
-    vars_lowerbound[psi_start + t] = -M_PI;
-    vars_upperbound[psi_start + t] = M_PI;
-
-    vars_lowerbound[cte_start + t] = std::numeric_limits<double>::min();
-    vars_upperbound[cte_start + t] = std::numeric_limits<double>::max();
-
-    vars_lowerbound[cte_start + t] = std::numeric_limits<double>::min();
-    vars_upperbound[cte_start + t] = std::numeric_limits<double>::max();
-
+  // Delta and 'a' have a shorter length
+  for(int t=0; t<N-1; ++t) {
     vars_lowerbound[delta_start + t] = -deg2rad(25);
     vars_upperbound[delta_start + t] = deg2rad(25);
 
@@ -237,14 +202,14 @@ std::vector<double> MPC::Solve(const VectorXd &state, const VectorXd &coeffs) {
     vars_upperbound[a_start + t] = 1.;
   }
 
-
   // Lower and upper limits for the constraints
   // Should be 0 besides initial state.
   Dvector constraints_lowerbound(n_constraints);
   Dvector constraints_upperbound(n_constraints);
   for (int i = 0; i < n_constraints; ++i) {
-    constraints_lowerbound[i] = 0;
-    constraints_upperbound[i] = 0;
+    // Helps the solver in steep curves
+    constraints_lowerbound[i] = -0.01;
+    constraints_upperbound[i] = 0.01;
   }
 
   // Lower bounds for initial state differ
@@ -297,11 +262,28 @@ std::vector<double> MPC::Solve(const VectorXd &state, const VectorXd &coeffs) {
   std::cout << "Cost " << cost << std::endl;
 
   /**
-   * TODO: Return the first actuator values. The variables can be accessed with
+   * Return the first actuator values. The variables can be accessed with
    *   `solution.x[i]`.
    *
    * {...} is shorthand for creating a vector, so auto x1 = {1.0,2.0}
    *   creates a 2 element double vector.
    */
-  return {};
+
+  // Create the output vector
+  std::vector<double> result;
+  result.push_back(solution.x[delta_start]);
+  result.push_back(solution.x[a_start]);
+
+  // Add x and y values of the predicted optimal sequence
+  for (int t = 0; t < N; ++t) {
+    result.push_back(solution.x[x_start + t]);
+    result.push_back(solution.x[y_start + t]);
+  }
+
+  // Save the variable solution for init of next round
+  prev_vars_ = vars;
+  has_prev_vars_ = true;
+
+  // Return the output vector
+  return result;
 }
